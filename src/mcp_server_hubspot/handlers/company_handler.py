@@ -84,6 +84,24 @@ class CompanyHandler(BaseHandler):
             "required": ["company_id"]
         }
 
+    def get_update_company_schema(self) -> Dict[str, Any]:
+        """Get the input schema for updating a company by ID.
+
+        Returns:
+            Schema definition dictionary
+        """
+        return {
+            "type": "object",
+            "properties": {
+                "company_id": {"type": "string", "description": "HubSpot company ID to update"},
+                "properties": {
+                    "type": "object",
+                    "description": "Object containing the properties to update"
+                }
+            },
+            "required": ["company_id", "properties"]
+        }
+
     def create_company(self, arguments: Optional[Dict[str, Any]]) -> List[types.TextContent]:
         """Create a new company in HubSpot.
         
@@ -221,5 +239,31 @@ class CompanyHandler(BaseHandler):
             self.store_in_faiss_safely(data, "company", metadata_extras)
         except Exception as e:
             self.logger.error(f"Error parsing company data: {str(e)}")
+
+        return self.create_text_response(results)
+
+    def update_company(self, arguments: Optional[Dict[str, Any]]) -> List[types.TextContent]:
+        """Update a specific company by ID in HubSpot.
+
+        Args:
+            arguments: Tool arguments containing company_id and properties to update
+
+        Returns:
+            Text response with updated company data
+        """
+        self.validate_required_arguments(arguments, ["company_id", "properties"])
+
+        company_id = arguments["company_id"]
+        properties = arguments["properties"]
+
+        results = self.hubspot.update_company(company_id, properties)
+
+        # Store in FAISS for future reference
+        try:
+            data = json.loads(results)
+            metadata_extras = {"company_id": company_id, "updated": True}
+            self.store_in_faiss_safely(data, "company", metadata_extras)
+        except Exception as e:
+            self.logger.error(f"Error parsing updated company data: {str(e)}")
 
         return self.create_text_response(results)

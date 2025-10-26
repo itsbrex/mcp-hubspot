@@ -26,6 +26,7 @@ from .handlers.contact_handler import ContactHandler
 from .handlers.conversation_handler import ConversationHandler
 from .handlers.ticket_handler import TicketHandler
 from .handlers.search_handler import SearchHandler
+from .handlers.property_handler import PropertyHandler
 
 logger = logging.getLogger('mcp_hubspot_server')
 
@@ -46,14 +47,16 @@ async def main(access_token: Optional[str] = None):
     conversation_handler = ConversationHandler(hubspot_client, faiss_manager, embedding_model)
     ticket_handler = TicketHandler(hubspot_client, faiss_manager, embedding_model)
     search_handler = SearchHandler(faiss_manager, embedding_model)
-    
+    property_handler = PropertyHandler(hubspot_client, faiss_manager, embedding_model)
+
     # Create server
     server = create_server_with_handlers(
-        company_handler, 
+        company_handler,
         contact_handler,
         conversation_handler,
         ticket_handler,
-        search_handler
+        search_handler,
+        property_handler
     )
     
     # Based on MCP implementation, use stdio_server as a context manager that yields streams
@@ -114,30 +117,33 @@ def create_server_with_handlers(
     contact_handler: ContactHandler,
     conversation_handler: ConversationHandler,
     ticket_handler: TicketHandler,
-    search_handler: SearchHandler
+    search_handler: SearchHandler,
+    property_handler: PropertyHandler
 ) -> Server:
     """Create and configure the MCP server with all handlers."""
     server = Server("hubspot-manager")
-    
+
     # Register resource handlers
     register_resource_handlers(server)
-    
+
     # Register tool definitions
-    register_tool_definitions(server, 
-                             company_handler, 
-                             contact_handler, 
-                             conversation_handler, 
-                             ticket_handler, 
-                             search_handler)
-    
+    register_tool_definitions(server,
+                             company_handler,
+                             contact_handler,
+                             conversation_handler,
+                             ticket_handler,
+                             search_handler,
+                             property_handler)
+
     # Register tool call handler
-    register_tool_call_handler(server, 
-                              company_handler, 
-                              contact_handler, 
-                              conversation_handler, 
-                              ticket_handler, 
-                              search_handler)
-            
+    register_tool_call_handler(server,
+                              company_handler,
+                              contact_handler,
+                              conversation_handler,
+                              ticket_handler,
+                              search_handler,
+                              property_handler)
+
     return server
 
 def register_resource_handlers(server: Server) -> None:
@@ -163,10 +169,11 @@ def register_tool_definitions(
     contact_handler: ContactHandler,
     conversation_handler: ConversationHandler,
     ticket_handler: TicketHandler,
-    search_handler: SearchHandler
+    search_handler: SearchHandler,
+    property_handler: PropertyHandler
 ) -> None:
     """Register tool definitions with the server.
-    
+
     Args:
         server: MCP server instance
         company_handler: Handler for company operations
@@ -174,6 +181,7 @@ def register_tool_definitions(
         conversation_handler: Handler for conversation operations
         ticket_handler: Handler for ticket operations
         search_handler: Handler for search operations
+        property_handler: Handler for property operations
     """
     @server.list_tools()
     async def handle_list_tools() -> list[types.Tool]:
@@ -200,6 +208,11 @@ def register_tool_definitions(
                 description="Get a specific company by ID from HubSpot",
                 inputSchema=company_handler.get_company_schema(),
             ),
+            types.Tool(
+                name="hubspot_update_company",
+                description="Update an existing company record in HubSpot",
+                inputSchema=company_handler.get_update_company_schema(),
+            ),
 
             # Contact tools
             types.Tool(
@@ -216,6 +229,11 @@ def register_tool_definitions(
                 name="hubspot_get_contact",
                 description="Get a specific contact by ID from HubSpot",
                 inputSchema=contact_handler.get_contact_schema(),
+            ),
+            types.Tool(
+                name="hubspot_update_contact",
+                description="Update an existing contact record in HubSpot",
+                inputSchema=contact_handler.get_update_contact_schema(),
             ),
 
             # Conversation tools
@@ -243,6 +261,23 @@ def register_tool_definitions(
                 description="Search for similar data in stored HubSpot API responses",
                 inputSchema=search_handler.get_search_data_schema(),
             ),
+
+            # Property tools
+            types.Tool(
+                name="hubspot_get_property",
+                description="Get details of a specific HubSpot property definition",
+                inputSchema=property_handler.get_property_schema(),
+            ),
+            types.Tool(
+                name="hubspot_update_property",
+                description="Update a HubSpot property definition (e.g., add dropdown options)",
+                inputSchema=property_handler.get_update_property_schema(),
+            ),
+            types.Tool(
+                name="hubspot_create_property",
+                description="Create a new custom property in HubSpot",
+                inputSchema=property_handler.get_create_property_schema(),
+            ),
         ]
 
 def register_tool_call_handler(
@@ -251,10 +286,11 @@ def register_tool_call_handler(
     contact_handler: ContactHandler,
     conversation_handler: ConversationHandler,
     ticket_handler: TicketHandler,
-    search_handler: SearchHandler
+    search_handler: SearchHandler,
+    property_handler: PropertyHandler
 ) -> None:
     """Register tool call handler with the server.
-    
+
     Args:
         server: MCP server instance
         company_handler: Handler for company operations
@@ -262,6 +298,7 @@ def register_tool_call_handler(
         conversation_handler: Handler for conversation operations
         ticket_handler: Handler for ticket operations
         search_handler: Handler for search operations
+        property_handler: Handler for property operations
     """
     @server.call_tool()
     async def handle_call_tool(
@@ -278,12 +315,16 @@ def register_tool_call_handler(
                 return company_handler.get_active_companies(arguments)
             elif name == "hubspot_get_company":
                 return company_handler.get_company(arguments)
+            elif name == "hubspot_update_company":
+                return company_handler.update_company(arguments)
             elif name == "hubspot_create_contact":
                 return contact_handler.create_contact(arguments)
             elif name == "hubspot_get_active_contacts":
                 return contact_handler.get_active_contacts(arguments)
             elif name == "hubspot_get_contact":
                 return contact_handler.get_contact(arguments)
+            elif name == "hubspot_update_contact":
+                return contact_handler.update_contact(arguments)
             elif name == "hubspot_get_recent_conversations":
                 return conversation_handler.get_recent_conversations(arguments)
             elif name == "hubspot_get_tickets":
@@ -292,6 +333,12 @@ def register_tool_call_handler(
                 return ticket_handler.get_ticket_conversation_threads(arguments)
             elif name == "hubspot_search_data":
                 return search_handler.search_data(arguments)
+            elif name == "hubspot_get_property":
+                return property_handler.get_property(arguments)
+            elif name == "hubspot_update_property":
+                return property_handler.update_property(arguments)
+            elif name == "hubspot_create_property":
+                return property_handler.create_property(arguments)
             else:
                 raise ValueError(f"Unknown tool: {name}")
         except ApiException as e:

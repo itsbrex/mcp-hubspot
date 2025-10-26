@@ -54,12 +54,12 @@ Run tests directly with Python (no test runner configured in pyproject.toml).
 2. **Handler Layer** (`handlers/`)
    - Domain-specific handlers extending `BaseHandler`
    - Each handler manages MCP tool schemas and executes tool calls
-   - Handlers: `CompanyHandler`, `ContactHandler`, `ConversationHandler`, `TicketHandler`, `SearchHandler`
+   - Handlers: `CompanyHandler`, `ContactHandler`, `ConversationHandler`, `TicketHandler`, `SearchHandler`, `PropertyHandler`
    - Responsible for FAISS storage integration via `store_in_faiss_safely()`
 
 3. **Client Layer** (`clients/`)
    - Direct HubSpot API interaction via `hubspot-api-client`
-   - Domain-specific clients: `CompanyClient`, `ContactClient`, `ConversationClient`, `TicketClient`
+   - Domain-specific clients: `CompanyClient`, `ContactClient`, `ConversationClient`, `TicketClient`, `PropertyClient`
    - Composed by `HubSpotClient` which delegates to specialized clients
 
 ### Key Components
@@ -128,14 +128,30 @@ The access token must have these scopes:
 
 ## MCP Tools Exposed
 
+### Contact Tools
 - `hubspot_create_contact` - Create contacts with duplicate prevention
+- `hubspot_get_active_contacts` - Retrieve most recently active contacts
+- `hubspot_get_contact` - Get a specific contact by ID (with optional properties filter)
+- `hubspot_update_contact` - Update an existing contact record
+
+### Company Tools
 - `hubspot_create_company` - Create companies with duplicate prevention
 - `hubspot_get_company_activity` - Retrieve activity for specific companies
 - `hubspot_get_active_companies` - Retrieve most recently active companies
 - `hubspot_get_company` - Get a specific company by ID (with optional properties filter)
-- `hubspot_get_active_contacts` - Retrieve most recently active contacts
-- `hubspot_get_contact` - Get a specific contact by ID (with optional properties filter)
+- `hubspot_update_company` - Update an existing company record
+
+### Conversation Tools
 - `hubspot_get_recent_conversations` - Retrieve conversation threads with messages
+
+### Ticket Tools
 - `hubspot_get_tickets` - Get tickets with configurable criteria ("default" or "Closed")
 - `hubspot_get_ticket_conversation_threads` - Get conversation threads for a specific ticket
+
+### Property Tools
+- `hubspot_get_property` - Get details of a specific HubSpot property definition
+- `hubspot_update_property` - Update a HubSpot property definition (e.g., add dropdown options)
+- `hubspot_create_property` - Create a new custom property in HubSpot
+
+### Search Tools
 - `hubspot_search_data` - Semantic search across stored HubSpot data via FAISS

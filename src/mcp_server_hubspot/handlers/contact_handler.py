@@ -71,6 +71,24 @@ class ContactHandler(BaseHandler):
             "required": ["contact_id"]
         }
 
+    def get_update_contact_schema(self) -> Dict[str, Any]:
+        """Get the input schema for updating a contact by ID.
+
+        Returns:
+            Schema definition dictionary
+        """
+        return {
+            "type": "object",
+            "properties": {
+                "contact_id": {"type": "string", "description": "HubSpot contact ID to update"},
+                "properties": {
+                    "type": "object",
+                    "description": "Object containing the properties to update"
+                }
+            },
+            "required": ["contact_id", "properties"]
+        }
+
     def create_contact(self, arguments: Optional[Dict[str, Any]]) -> List[types.TextContent]:
         """Create a new contact in HubSpot.
         
@@ -207,5 +225,31 @@ class ContactHandler(BaseHandler):
             self.store_in_faiss_safely(data, "contact", metadata_extras)
         except Exception as e:
             self.logger.error(f"Error parsing contact data: {str(e)}")
+
+        return self.create_text_response(results)
+
+    def update_contact(self, arguments: Optional[Dict[str, Any]]) -> List[types.TextContent]:
+        """Update a specific contact by ID in HubSpot.
+
+        Args:
+            arguments: Tool arguments containing contact_id and properties to update
+
+        Returns:
+            Text response with updated contact data
+        """
+        self.validate_required_arguments(arguments, ["contact_id", "properties"])
+
+        contact_id = arguments["contact_id"]
+        properties = arguments["properties"]
+
+        results = self.hubspot.update_contact(contact_id, properties)
+
+        # Store in FAISS for future reference
+        try:
+            data = json.loads(results)
+            metadata_extras = {"contact_id": contact_id, "updated": True}
+            self.store_in_faiss_safely(data, "contact", metadata_extras)
+        except Exception as e:
+            self.logger.error(f"Error parsing updated contact data: {str(e)}")
 
         return self.create_text_response(results)

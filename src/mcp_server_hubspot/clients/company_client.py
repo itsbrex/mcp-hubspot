@@ -67,6 +67,32 @@ class CompanyClient:
         converted_company = convert_datetime_fields(company_dict)
         return json.dumps(converted_company)
 
+    @handle_hubspot_errors
+    def update(self, company_id: str, properties: Dict[str, Any]) -> str:
+        """Update a specific company by ID in HubSpot.
+
+        Args:
+            company_id: HubSpot company ID
+            properties: Dictionary of properties to update
+
+        Returns:
+            JSON string with updated company data
+        """
+        from hubspot.crm.companies import SimplePublicObjectInput
+
+        simple_public_object_input = SimplePublicObjectInput(
+            properties=properties
+        )
+
+        company = self.client.crm.companies.basic_api.update(
+            company_id=company_id,
+            simple_public_object_input=simple_public_object_input
+        )
+
+        company_dict = company.to_dict()
+        converted_company = convert_datetime_fields(company_dict)
+        return json.dumps(converted_company)
+
     def _create_company_search_request(self, limit: int) -> PublicObjectSearchRequest:
         """Create a search request for companies sorted by last modified date.
         
