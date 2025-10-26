@@ -195,7 +195,12 @@ def register_tool_definitions(
                 description="Get most recently active companies from HubSpot",
                 inputSchema=company_handler.get_active_companies_schema(),
             ),
-            
+            types.Tool(
+                name="hubspot_get_company",
+                description="Get a specific company by ID from HubSpot",
+                inputSchema=company_handler.get_company_schema(),
+            ),
+
             # Contact tools
             types.Tool(
                 name="hubspot_create_contact",
@@ -207,7 +212,12 @@ def register_tool_definitions(
                 description="Get most recently active contacts from HubSpot",
                 inputSchema=contact_handler.get_active_contacts_schema(),
             ),
-            
+            types.Tool(
+                name="hubspot_get_contact",
+                description="Get a specific contact by ID from HubSpot",
+                inputSchema=contact_handler.get_contact_schema(),
+            ),
+
             # Conversation tools
             types.Tool(
                 name="hubspot_get_recent_conversations",
@@ -266,10 +276,14 @@ def register_tool_call_handler(
                 return company_handler.get_company_activity(arguments)
             elif name == "hubspot_get_active_companies":
                 return company_handler.get_active_companies(arguments)
+            elif name == "hubspot_get_company":
+                return company_handler.get_company(arguments)
             elif name == "hubspot_create_contact":
                 return contact_handler.create_contact(arguments)
             elif name == "hubspot_get_active_contacts":
                 return contact_handler.get_active_contacts(arguments)
+            elif name == "hubspot_get_contact":
+                return contact_handler.get_contact(arguments)
             elif name == "hubspot_get_recent_conversations":
                 return conversation_handler.get_recent_conversations(arguments)
             elif name == "hubspot_get_tickets":

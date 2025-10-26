@@ -3,7 +3,7 @@ Client for HubSpot company-related operations.
 """
 import json
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from hubspot import HubSpot
 from hubspot.crm.companies import PublicObjectSearchRequest
@@ -30,10 +30,10 @@ class CompanyClient:
     @handle_hubspot_errors
     def get_recent(self, limit: int = 10) -> str:
         """Get most recently active companies from HubSpot.
-        
+
         Args:
             limit: Maximum number of companies to return (default: 10)
-            
+
         Returns:
             JSON string with company data
         """
@@ -41,11 +41,32 @@ class CompanyClient:
         search_response = self.client.crm.companies.search_api.do_search(
             public_object_search_request=search_request
         )
-        
+
         companies_dict = [company.to_dict() for company in search_response.results]
         converted_companies = convert_datetime_fields(companies_dict)
         return json.dumps(converted_companies)
-    
+
+    @handle_hubspot_errors
+    def get_by_id(self, company_id: str, properties: Optional[List[str]] = None) -> str:
+        """Get a specific company by ID from HubSpot.
+
+        Args:
+            company_id: HubSpot company ID
+            properties: Optional list of properties to retrieve. If None, returns all properties.
+
+        Returns:
+            JSON string with company data
+        """
+        company = self.client.crm.companies.basic_api.get_by_id(
+            company_id=company_id,
+            properties=properties,
+            archived=False
+        )
+
+        company_dict = company.to_dict()
+        converted_company = convert_datetime_fields(company_dict)
+        return json.dumps(converted_company)
+
     def _create_company_search_request(self, limit: int) -> PublicObjectSearchRequest:
         """Create a search request for companies sorted by last modified date.
         

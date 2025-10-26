@@ -41,7 +41,7 @@ class ContactHandler(BaseHandler):
     
     def get_active_contacts_schema(self) -> Dict[str, Any]:
         """Get the input schema for active contacts.
-        
+
         Returns:
             Schema definition dictionary
         """
@@ -51,7 +51,26 @@ class ContactHandler(BaseHandler):
                 "limit": {"type": "integer", "description": "Maximum number of contacts to return (default: 10)"}
             }
         }
-    
+
+    def get_contact_schema(self) -> Dict[str, Any]:
+        """Get the input schema for getting a contact by ID.
+
+        Returns:
+            Schema definition dictionary
+        """
+        return {
+            "type": "object",
+            "properties": {
+                "contact_id": {"type": "string", "description": "HubSpot contact ID"},
+                "properties": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional list of properties to retrieve. If omitted, returns all properties."
+                }
+            },
+            "required": ["contact_id"]
+        }
+
     def create_contact(self, arguments: Optional[Dict[str, Any]]) -> List[types.TextContent]:
         """Create a new contact in HubSpot.
         
@@ -141,20 +160,20 @@ class ContactHandler(BaseHandler):
     
     def get_active_contacts(self, arguments: Optional[Dict[str, Any]]) -> List[types.TextContent]:
         """Get most recently active contacts from HubSpot.
-        
+
         Args:
             arguments: Tool arguments containing limit parameter
-            
+
         Returns:
             Text response with contact data
         """
         limit = self.get_argument_with_default(arguments, "limit", 10)
-        
+
         # Ensure limit is an integer
         limit = int(limit) if limit is not None else 10
-        
+
         results = self.hubspot.get_recent_contacts(limit=limit)
-        
+
         # Store in FAISS for future reference
         try:
             data = json.loads(results)
@@ -162,5 +181,31 @@ class ContactHandler(BaseHandler):
             self.store_in_faiss_safely(data, "contact", metadata_extras)
         except Exception as e:
             self.logger.error(f"Error parsing contact data: {str(e)}")
-        
+
+        return self.create_text_response(results)
+
+    def get_contact(self, arguments: Optional[Dict[str, Any]]) -> List[types.TextContent]:
+        """Get a specific contact by ID from HubSpot.
+
+        Args:
+            arguments: Tool arguments containing contact_id and optional properties
+
+        Returns:
+            Text response with contact data
+        """
+        self.validate_required_arguments(arguments, ["contact_id"])
+
+        contact_id = arguments["contact_id"]
+        properties = arguments.get("properties")
+
+        results = self.hubspot.get_contact_by_id(contact_id, properties)
+
+        # Store in FAISS for future reference
+        try:
+            data = json.loads(results)
+            metadata_extras = {"contact_id": contact_id}
+            self.store_in_faiss_safely(data, "contact", metadata_extras)
+        except Exception as e:
+            self.logger.error(f"Error parsing contact data: {str(e)}")
+
         return self.create_text_response(results)

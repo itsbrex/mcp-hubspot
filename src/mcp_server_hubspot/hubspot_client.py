@@ -77,26 +77,50 @@ class HubSpotClient:
         
     def get_company_activity(self, company_id: str) -> str:
         """Get activity history for a specific company.
-        
+
         Args:
             company_id: HubSpot company ID
-            
+
         Returns:
             JSON string with company activity data
         """
         return self.companies.get_activity(company_id)
-    
+
+    def get_company_by_id(self, company_id: str, properties: Optional[List[str]] = None) -> str:
+        """Get a specific company by ID from HubSpot.
+
+        Args:
+            company_id: HubSpot company ID
+            properties: Optional list of properties to retrieve. If None, returns all properties.
+
+        Returns:
+            JSON string with company data
+        """
+        return self.companies.get_by_id(company_id, properties)
+
     def get_recent_contacts(self, limit: int = 10) -> str:
         """Get most recently active contacts from HubSpot.
-        
+
         Args:
             limit: Maximum number of contacts to return (default: 10)
-            
+
         Returns:
             JSON string with contact data
         """
         return self.contacts.get_recent(limit)
-    
+
+    def get_contact_by_id(self, contact_id: str, properties: Optional[List[str]] = None) -> str:
+        """Get a specific contact by ID from HubSpot.
+
+        Args:
+            contact_id: HubSpot contact ID
+            properties: Optional list of properties to retrieve. If None, returns all properties.
+
+        Returns:
+            JSON string with contact data
+        """
+        return self.contacts.get_by_id(contact_id, properties)
+
     def get_recent_emails(self, limit: int = 10, after: Optional[str] = None) -> Dict[str, Any]:
         """Get recent emails from HubSpot with pagination.
         
