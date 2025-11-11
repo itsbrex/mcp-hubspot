@@ -17,6 +17,7 @@ from .clients.company_client import CompanyClient
 from .clients.contact_client import ContactClient
 from .clients.conversation_client import ConversationClient
 from .clients.ticket_client import TicketClient
+from .clients.property_client import PropertyClient
 
 # Re-export ApiException
 __all__ = ["HubSpotClient", "ApiException"]
@@ -44,6 +45,7 @@ class HubSpotClient:
         self.contacts = ContactClient(self.client, self.access_token)
         self.conversations = ConversationClient(self.client, self.access_token, self.thread_storage)
         self.tickets = TicketClient(self.client, self.access_token)
+        self.properties = PropertyClient(self.client, self.access_token)
     
     def _get_access_token(self, access_token: Optional[str]) -> str:
         """Retrieve and validate the HubSpot access token.
@@ -77,26 +79,74 @@ class HubSpotClient:
         
     def get_company_activity(self, company_id: str) -> str:
         """Get activity history for a specific company.
-        
+
         Args:
             company_id: HubSpot company ID
-            
+
         Returns:
             JSON string with company activity data
         """
         return self.companies.get_activity(company_id)
-    
+
+    def get_company_by_id(self, company_id: str, properties: Optional[List[str]] = None) -> str:
+        """Get a specific company by ID from HubSpot.
+
+        Args:
+            company_id: HubSpot company ID
+            properties: Optional list of properties to retrieve. If None, returns all properties.
+
+        Returns:
+            JSON string with company data
+        """
+        return self.companies.get_by_id(company_id, properties)
+
+    def update_company(self, company_id: str, properties: Dict[str, Any]) -> str:
+        """Update a specific company by ID in HubSpot.
+
+        Args:
+            company_id: HubSpot company ID
+            properties: Dictionary of properties to update
+
+        Returns:
+            JSON string with updated company data
+        """
+        return self.companies.update(company_id, properties)
+
     def get_recent_contacts(self, limit: int = 10) -> str:
         """Get most recently active contacts from HubSpot.
-        
+
         Args:
             limit: Maximum number of contacts to return (default: 10)
-            
+
         Returns:
             JSON string with contact data
         """
         return self.contacts.get_recent(limit)
-    
+
+    def get_contact_by_id(self, contact_id: str, properties: Optional[List[str]] = None) -> str:
+        """Get a specific contact by ID from HubSpot.
+
+        Args:
+            contact_id: HubSpot contact ID
+            properties: Optional list of properties to retrieve. If None, returns all properties.
+
+        Returns:
+            JSON string with contact data
+        """
+        return self.contacts.get_by_id(contact_id, properties)
+
+    def update_contact(self, contact_id: str, properties: Dict[str, Any]) -> str:
+        """Update a specific contact by ID in HubSpot.
+
+        Args:
+            contact_id: HubSpot contact ID
+            properties: Dictionary of properties to update
+
+        Returns:
+            JSON string with updated contact data
+        """
+        return self.contacts.update(contact_id, properties)
+
     def get_recent_emails(self, limit: int = 10, after: Optional[str] = None) -> Dict[str, Any]:
         """Get recent emails from HubSpot with pagination.
         
@@ -151,11 +201,61 @@ class HubSpotClient:
     
     def get_ticket_conversation_threads(self, ticket_id: str) -> Dict[str, Any]:
         """Get conversation threads associated with a specific ticket.
-        
+
         Args:
             ticket_id: The ID of the ticket to retrieve conversation threads for
-            
+
         Returns:
             Dictionary containing conversation threads with their messages
         """
         return self.tickets.get_conversation_threads(ticket_id)
+
+    def get_property(self, object_type: str, property_name: str) -> str:
+        """Get details of a specific property.
+
+        Args:
+            object_type: Type of CRM object ("companies" or "contacts")
+            property_name: Name of the property
+
+        Returns:
+            JSON string with property definition
+        """
+        return self.properties.get_property(object_type, property_name)
+
+    def update_property(self, object_type: str, property_name: str,
+                       options: Optional[List[Dict[str, Any]]] = None,
+                       **kwargs) -> str:
+        """Update a property definition.
+
+        Args:
+            object_type: Type of CRM object ("companies" or "contacts")
+            property_name: Name of the property
+            options: Array of option objects for dropdown fields
+            **kwargs: Additional property attributes to update
+
+        Returns:
+            JSON string with updated property definition
+        """
+        return self.properties.update_property(object_type, property_name, options, **kwargs)
+
+    def create_property(self, object_type: str, name: str, label: str,
+                       property_type: str, field_type: str, group_name: str,
+                       options: Optional[List[Dict[str, Any]]] = None,
+                       **kwargs) -> str:
+        """Create a new custom property.
+
+        Args:
+            object_type: Type of CRM object ("companies" or "contacts")
+            name: Internal name of the property
+            label: Display label for the property
+            property_type: Data type (string, number, date, etc.)
+            field_type: Field type (text, textarea, select, etc.)
+            group_name: Property group name
+            options: Array of option objects for dropdown fields
+            **kwargs: Additional property attributes
+
+        Returns:
+            JSON string with created property definition
+        """
+        return self.properties.create_property(object_type, name, label, property_type,
+                                              field_type, group_name, options, **kwargs)
